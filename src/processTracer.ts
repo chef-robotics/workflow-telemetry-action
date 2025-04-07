@@ -5,6 +5,7 @@ import si from 'systeminformation'
 import { sprintf } from 'sprintf-js'
 import { parse } from './procTraceParser'
 import { CompletedCommand, WorkflowJobType } from './interfaces'
+import { MERMAID_DEFAULTS } from './config'
 import * as logger from './logger'
 
 const PROC_TRACER_PID_KEY = 'PROC_TRACER_PID'
@@ -200,8 +201,9 @@ export async function report(
     if (procTraceChartShow) {
       chartContent = chartContent.concat('gantt', '\n')
       chartContent = chartContent.concat('\t', `title ${currentJob.name}`, '\n')
-      chartContent = chartContent.concat('\t', `dateFormat x`, '\n')
-      chartContent = chartContent.concat('\t', `axisFormat %H:%M:%S`, '\n')
+      chartContent = chartContent.concat('\t', `dateFormat ${MERMAID_DEFAULTS.gantt.dateFormat}`, '\n')
+      chartContent = chartContent.concat('\t', `axisFormat ${MERMAID_DEFAULTS.gantt.axisFormat}`, '\n')
+      chartContent = chartContent.concat('\t', `fontFamily "${MERMAID_DEFAULTS.gantt.fontFamily}"`, '\n')
 
       const filteredCommands: CompletedCommand[] = [...completedCommands]
         .sort((a: CompletedCommand, b: CompletedCommand) => {
@@ -284,7 +286,7 @@ export async function report(
 
     ///////////////////////////////////////////////////////////////////////////
 
-    const postContentItems: string[] = ['', '### Process Trace']
+    const postContentItems: string[] = ['', '### Process trace']
     if (procTraceChartShow) {
       postContentItems.push(
         '',
@@ -296,7 +298,7 @@ export async function report(
     if (procTraceTableShow) {
       postContentItems.push(
         '',
-        `#### All processes with detail`,
+        `#### All processes with details`,
         '',
         '```' + '\n' + tableContent + '\n' + '```'
       )

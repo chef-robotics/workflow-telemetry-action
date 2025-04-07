@@ -1,4 +1,5 @@
 import { WorkflowJobType } from './interfaces'
+import { MERMAID_DEFAULTS } from './config'
 import * as logger from './logger'
 
 function generateTraceChartForSteps(job: WorkflowJobType): string {
@@ -22,8 +23,9 @@ function generateTraceChartForSteps(job: WorkflowJobType): string {
 
   chartContent = chartContent.concat('gantt', '\n')
   chartContent = chartContent.concat('\t', `title ${job.name}`, '\n')
-  chartContent = chartContent.concat('\t', `dateFormat x`, '\n')
-  chartContent = chartContent.concat('\t', `axisFormat %H:%M:%S`, '\n')
+  chartContent = chartContent.concat('\t', `dateFormat ${MERMAID_DEFAULTS.gantt.dateFormat}`, '\n')
+  chartContent = chartContent.concat('\t', `axisFormat ${MERMAID_DEFAULTS.gantt.axisFormat}`, '\n')
+  chartContent = chartContent.concat('\t', `fontFamily "${MERMAID_DEFAULTS.gantt.fontFamily}"`, '\n')
 
   for (const step of job.steps || []) {
     if (!step.started_at || !step.completed_at) {
@@ -56,7 +58,7 @@ function generateTraceChartForSteps(job: WorkflowJobType): string {
 
   const postContentItems: string[] = [
     '',
-    '### Step Trace',
+    '### Step trace',
     '',
     '```mermaid' + '\n' + chartContent + '\n' + '```'
   ]

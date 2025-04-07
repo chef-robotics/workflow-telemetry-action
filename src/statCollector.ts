@@ -21,6 +21,7 @@ import {
 } from './interfaces'
 import * as logger from './logger'
 import { log } from 'console'
+import { CHART_DEFAULTS } from './config'
 
 const STAT_SERVER_PORT = 7777
 
@@ -60,16 +61,16 @@ async function reportWorkflowMetrics(): Promise<string> {
   const cpuLoad =
     userLoadX && userLoadX.length && systemLoadX && systemLoadX.length
       ? await getStackedAreaGraph({
-          label: 'CPU Load (%)',
+          label: 'CPU load (%)',
           axisColor,
           areas: [
             {
-              label: 'User Load',
+              label: 'User load',
               color: '#e41a1c99',
               points: userLoadX
             },
             {
-              label: 'System Load',
+              label: 'System load',
               color: '#ff7f0099',
               points: systemLoadX
             }
@@ -83,7 +84,7 @@ async function reportWorkflowMetrics(): Promise<string> {
     availableMemoryX &&
     availableMemoryX.length
       ? await getStackedAreaGraph({
-          label: 'Memory Usage (MB)',
+          label: 'Memory usage (MB)',
           axisColor,
           areas: [
             {
@@ -103,7 +104,7 @@ async function reportWorkflowMetrics(): Promise<string> {
   const networkIORead =
     networkReadX && networkReadX.length
       ? await getLineGraph({
-          label: 'Network I/O Read (MB)',
+          label: 'Network I/O read (MB)',
           axisColor,
           line: {
             label: 'Read',
@@ -116,7 +117,7 @@ async function reportWorkflowMetrics(): Promise<string> {
   const networkIOWrite =
     networkWriteX && networkWriteX.length
       ? await getLineGraph({
-          label: 'Network I/O Write (MB)',
+          label: 'Network I/O write (MB)',
           axisColor,
           line: {
             label: 'Write',
@@ -129,7 +130,7 @@ async function reportWorkflowMetrics(): Promise<string> {
   const diskIORead =
     diskReadX && diskReadX.length
       ? await getLineGraph({
-          label: 'Disk I/O Read (MB)',
+          label: 'Disk I/O read (MB)',
           axisColor,
           line: {
             label: 'Read',
@@ -142,7 +143,7 @@ async function reportWorkflowMetrics(): Promise<string> {
   const diskIOWrite =
     diskWriteX && diskWriteX.length
       ? await getLineGraph({
-          label: 'Disk I/O Write (MB)',
+          label: 'Disk I/O write (MB)',
           axisColor,
           line: {
             label: 'Write',
@@ -155,7 +156,7 @@ async function reportWorkflowMetrics(): Promise<string> {
   const diskSizeUsage =
     diskUsedX && diskUsedX.length && diskAvailableX && diskAvailableX.length
       ? await getStackedAreaGraph({
-          label: 'Disk Usage (MB)',
+          label: 'Disk usage (MB)',
           axisColor,
           areas: [
             {
@@ -175,21 +176,21 @@ async function reportWorkflowMetrics(): Promise<string> {
   const postContentItems: string[] = []
   if (cpuLoad) {
     postContentItems.push(
-      '### CPU Metrics',
+      '### CPU metrics',
       `![${cpuLoad.id}](${cpuLoad.url})`,
       ''
     )
   }
   if (memoryUsage) {
     postContentItems.push(
-      '### Memory Metrics',
+      '### Memory metrics',
       `![${memoryUsage.id}](${memoryUsage.url})`,
       ''
     )
   }
   if ((networkIORead && networkIOWrite) || (diskIORead && diskIOWrite)) {
     postContentItems.push(
-      '### IO Metrics',
+      '### IO metrics',
       '|               | Read      | Write     |',
       '|---            |---        |---        |'
     )
@@ -206,7 +207,7 @@ async function reportWorkflowMetrics(): Promise<string> {
   }
   if (diskSizeUsage) {
     postContentItems.push(
-      '### Disk Size Metrics',
+      '### Disk size metrics',
       `![${diskSizeUsage.id}](${diskSizeUsage.url})`,
       ''
     )
@@ -358,16 +359,10 @@ async function getDiskSizeStats(): Promise<ProcessedDiskSizeStats> {
 async function getLineGraph(options: LineGraphOptions): Promise<GraphResponse> {
   const payload = {
     options: {
-      width: 1000,
-      height: 500,
-      xAxis: {
-        label: 'Time'
-      },
+      ...CHART_DEFAULTS.options,
       yAxis: {
+        ...CHART_DEFAULTS.options.yAxis,
         label: options.label
-      },
-      timeTicks: {
-        unit: 'auto'
       }
     },
     lines: [options.line]
@@ -392,16 +387,10 @@ async function getStackedAreaGraph(
 ): Promise<GraphResponse> {
   const payload = {
     options: {
-      width: 1000,
-      height: 500,
-      xAxis: {
-        label: 'Time'
-      },
+      ...CHART_DEFAULTS.options,
       yAxis: {
+        ...CHART_DEFAULTS.options.yAxis,
         label: options.label
-      },
-      timeTicks: {
-        unit: 'auto'
       }
     },
     areas: options.areas
