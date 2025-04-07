@@ -1,0 +1,48 @@
+name: self-test
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'action.yml'
+      - '.github/workflows/self-test.yml'
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  self-test:
+    name: Test the action against itself
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build & package
+        run: |
+          npm ci
+          npm run build
+          npm run package
+
+      # Test the action itself (using the local changes)
+      - name: Run workflow telemetry
+        uses: ./
+        with:
+          proc_trace_sys_enable: true
+
+      # This is a simple test that gives the action something to measure
+      - name: Run some commands to generate metrics
+        run: |
+          echo "Creating some disk activity..."
+          dd if=/dev/zero of=testfile bs=1M count=100
+          rm testfile
+
+          echo "Creating some CPU activity..."
+          for i in {1..10000000}; do :; done

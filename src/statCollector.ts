@@ -1,7 +1,7 @@
-import { ChildProcess, spawn } from 'child_process'
-import path from 'path'
-import axios from 'axios'
-import * as core from '@actions/core'
+import { ChildProcess, spawn } from "child_process";
+import path from "path";
+import axios from "axios";
+import * as core from "@actions/core";
 import {
   CPUStats,
   DiskSizeStats,
@@ -17,65 +17,66 @@ import {
   ProcessedNetworkStats,
   ProcessedStats,
   StackedAreaGraphOptions,
-  WorkflowJobType
-} from './interfaces'
-import * as logger from './logger'
-import { log } from 'console'
+  WorkflowJobType,
+} from "./interfaces";
+import * as logger from "./logger";
+import { log } from "console";
+import { CHART_DEFAULTS } from "./config";
 
-const STAT_SERVER_PORT = 7777
+const STAT_SERVER_PORT = 7777;
 
-const BLACK = '#000000'
-const WHITE = '#FFFFFF'
+const BLACK = "#000000";
+const WHITE = "#FFFFFF";
 
 async function triggerStatCollect(): Promise<void> {
-  logger.debug('Triggering stat collect ...')
+  logger.debug("Triggering stat collect ...");
   const response = await axios.post(
     `http://localhost:${STAT_SERVER_PORT}/collect`
-  )
+  );
   if (logger.isDebugEnabled()) {
-    logger.debug(`Triggered stat collect: ${JSON.stringify(response.data)}`)
+    logger.debug(`Triggered stat collect: ${JSON.stringify(response.data)}`);
   }
 }
 
 async function reportWorkflowMetrics(): Promise<string> {
-  const theme: string = core.getInput('theme', { required: false })
-  let axisColor = BLACK
+  const theme: string = core.getInput("theme", { required: false });
+  let axisColor = BLACK;
   switch (theme) {
-    case 'light':
-      axisColor = BLACK
-      break
-    case 'dark':
-      axisColor = WHITE
-      break
+    case "light":
+      axisColor = BLACK;
+      break;
+    case "dark":
+      axisColor = WHITE;
+      break;
     default:
-      core.warning(`Invalid theme: ${theme}`)
+      core.warning(`Invalid theme: ${theme}`);
   }
 
-  const { userLoadX, systemLoadX } = await getCPUStats()
-  const { activeMemoryX, availableMemoryX } = await getMemoryStats()
-  const { networkReadX, networkWriteX } = await getNetworkStats()
-  const { diskReadX, diskWriteX } = await getDiskStats()
-  const { diskAvailableX, diskUsedX } = await getDiskSizeStats()
+  const { userLoadX, systemLoadX } = await getCPUStats();
+  const { activeMemoryX, availableMemoryX } = await getMemoryStats();
+  const { networkReadX, networkWriteX } = await getNetworkStats();
+  const { diskReadX, diskWriteX } = await getDiskStats();
+  const { diskAvailableX, diskUsedX } = await getDiskSizeStats();
 
   const cpuLoad =
     userLoadX && userLoadX.length && systemLoadX && systemLoadX.length
       ? await getStackedAreaGraph({
-          label: 'CPU Load (%)',
+          label: "CPU load (%)",
           axisColor,
           areas: [
             {
-              label: 'User Load',
-              color: '#e41a1c99',
-              points: userLoadX
+              label: "User load",
+              color: "#e41a1c99",
+              points: userLoadX,
             },
             {
-              label: 'System Load',
-              color: '#ff7f0099',
-              points: systemLoadX
-            }
-          ]
+              label: "System load",
+              color: "#ff7f0099",
+              points: systemLoadX,
+            },
+          ],
         })
-      : null
+      : null;
 
   const memoryUsage =
     activeMemoryX &&
@@ -83,173 +84,173 @@ async function reportWorkflowMetrics(): Promise<string> {
     availableMemoryX &&
     availableMemoryX.length
       ? await getStackedAreaGraph({
-          label: 'Memory Usage (MB)',
+          label: "Memory usage (MB)",
           axisColor,
           areas: [
             {
-              label: 'Used',
-              color: '#377eb899',
-              points: activeMemoryX
+              label: "Used",
+              color: "#377eb899",
+              points: activeMemoryX,
             },
             {
-              label: 'Free',
-              color: '#4daf4a99',
-              points: availableMemoryX
-            }
-          ]
+              label: "Free",
+              color: "#4daf4a99",
+              points: availableMemoryX,
+            },
+          ],
         })
-      : null
+      : null;
 
   const networkIORead =
     networkReadX && networkReadX.length
       ? await getLineGraph({
-          label: 'Network I/O Read (MB)',
+          label: "Network I/O read (MB)",
           axisColor,
           line: {
-            label: 'Read',
-            color: '#be4d25',
-            points: networkReadX
-          }
+            label: "Read",
+            color: "#be4d25",
+            points: networkReadX,
+          },
         })
-      : null
+      : null;
 
   const networkIOWrite =
     networkWriteX && networkWriteX.length
       ? await getLineGraph({
-          label: 'Network I/O Write (MB)',
+          label: "Network I/O write (MB)",
           axisColor,
           line: {
-            label: 'Write',
-            color: '#6c25be',
-            points: networkWriteX
-          }
+            label: "Write",
+            color: "#6c25be",
+            points: networkWriteX,
+          },
         })
-      : null
+      : null;
 
   const diskIORead =
     diskReadX && diskReadX.length
       ? await getLineGraph({
-          label: 'Disk I/O Read (MB)',
+          label: "Disk I/O read (MB)",
           axisColor,
           line: {
-            label: 'Read',
-            color: '#be4d25',
-            points: diskReadX
-          }
+            label: "Read",
+            color: "#be4d25",
+            points: diskReadX,
+          },
         })
-      : null
+      : null;
 
   const diskIOWrite =
     diskWriteX && diskWriteX.length
       ? await getLineGraph({
-          label: 'Disk I/O Write (MB)',
+          label: "Disk I/O write (MB)",
           axisColor,
           line: {
-            label: 'Write',
-            color: '#6c25be',
-            points: diskWriteX
-          }
+            label: "Write",
+            color: "#6c25be",
+            points: diskWriteX,
+          },
         })
-      : null
+      : null;
 
   const diskSizeUsage =
     diskUsedX && diskUsedX.length && diskAvailableX && diskAvailableX.length
       ? await getStackedAreaGraph({
-          label: 'Disk Usage (MB)',
+          label: "Disk usage (MB)",
           axisColor,
           areas: [
             {
-              label: 'Used',
-              color: '#377eb899',
-              points: diskUsedX
+              label: "Used",
+              color: "#377eb899",
+              points: diskUsedX,
             },
             {
-              label: 'Free',
-              color: '#4daf4a99',
-              points: diskAvailableX
-            }
-          ]
+              label: "Free",
+              color: "#4daf4a99",
+              points: diskAvailableX,
+            },
+          ],
         })
-      : null
+      : null;
 
-  const postContentItems: string[] = []
+  const postContentItems: string[] = [];
   if (cpuLoad) {
     postContentItems.push(
-      '### CPU Metrics',
+      "### CPU metrics",
       `![${cpuLoad.id}](${cpuLoad.url})`,
-      ''
-    )
+      ""
+    );
   }
   if (memoryUsage) {
     postContentItems.push(
-      '### Memory Metrics',
+      "### Memory metrics",
       `![${memoryUsage.id}](${memoryUsage.url})`,
-      ''
-    )
+      ""
+    );
   }
   if ((networkIORead && networkIOWrite) || (diskIORead && diskIOWrite)) {
     postContentItems.push(
-      '### IO Metrics',
-      '|               | Read      | Write     |',
-      '|---            |---        |---        |'
-    )
+      "### IO metrics",
+      "|               | Read      | Write     |",
+      "|---            |---        |---        |"
+    );
   }
   if (networkIORead && networkIOWrite) {
     postContentItems.push(
       `| Network I/O   | ![${networkIORead.id}](${networkIORead.url})        | ![${networkIOWrite.id}](${networkIOWrite.url})        |`
-    )
+    );
   }
   if (diskIORead && diskIOWrite) {
     postContentItems.push(
       `| Disk I/O      | ![${diskIORead.id}](${diskIORead.url})              | ![${diskIOWrite.id}](${diskIOWrite.url})              |`
-    )
+    );
   }
   if (diskSizeUsage) {
     postContentItems.push(
-      '### Disk Size Metrics',
+      "### Disk size metrics",
       `![${diskSizeUsage.id}](${diskSizeUsage.url})`,
-      ''
-    )
+      ""
+    );
   }
 
-  return postContentItems.join('\n')
+  return postContentItems.join("\n");
 }
 
 async function getCPUStats(): Promise<ProcessedCPUStats> {
-  const userLoadX: ProcessedStats[] = []
-  const systemLoadX: ProcessedStats[] = []
+  const userLoadX: ProcessedStats[] = [];
+  const systemLoadX: ProcessedStats[] = [];
 
-  logger.debug('Getting CPU stats ...')
-  const response = await axios.get(`http://localhost:${STAT_SERVER_PORT}/cpu`)
+  logger.debug("Getting CPU stats ...");
+  const response = await axios.get(`http://localhost:${STAT_SERVER_PORT}/cpu`);
   if (logger.isDebugEnabled()) {
-    logger.debug(`Got CPU stats: ${JSON.stringify(response.data)}`)
+    logger.debug(`Got CPU stats: ${JSON.stringify(response.data)}`);
   }
 
   response.data.forEach((element: CPUStats) => {
     userLoadX.push({
       x: element.time,
-      y: element.userLoad && element.userLoad > 0 ? element.userLoad : 0
-    })
+      y: element.userLoad && element.userLoad > 0 ? element.userLoad : 0,
+    });
 
     systemLoadX.push({
       x: element.time,
-      y: element.systemLoad && element.systemLoad > 0 ? element.systemLoad : 0
-    })
-  })
+      y: element.systemLoad && element.systemLoad > 0 ? element.systemLoad : 0,
+    });
+  });
 
-  return { userLoadX, systemLoadX }
+  return { userLoadX, systemLoadX };
 }
 
 async function getMemoryStats(): Promise<ProcessedMemoryStats> {
-  const activeMemoryX: ProcessedStats[] = []
-  const availableMemoryX: ProcessedStats[] = []
+  const activeMemoryX: ProcessedStats[] = [];
+  const availableMemoryX: ProcessedStats[] = [];
 
-  logger.debug('Getting memory stats ...')
+  logger.debug("Getting memory stats ...");
   const response = await axios.get(
     `http://localhost:${STAT_SERVER_PORT}/memory`
-  )
+  );
   if (logger.isDebugEnabled()) {
-    logger.debug(`Got memory stats: ${JSON.stringify(response.data)}`)
+    logger.debug(`Got memory stats: ${JSON.stringify(response.data)}`);
   }
 
   response.data.forEach((element: MemoryStats) => {
@@ -258,83 +259,83 @@ async function getMemoryStats(): Promise<ProcessedMemoryStats> {
       y:
         element.activeMemoryMb && element.activeMemoryMb > 0
           ? element.activeMemoryMb
-          : 0
-    })
+          : 0,
+    });
 
     availableMemoryX.push({
       x: element.time,
       y:
         element.availableMemoryMb && element.availableMemoryMb > 0
           ? element.availableMemoryMb
-          : 0
-    })
-  })
+          : 0,
+    });
+  });
 
-  return { activeMemoryX, availableMemoryX }
+  return { activeMemoryX, availableMemoryX };
 }
 
 async function getNetworkStats(): Promise<ProcessedNetworkStats> {
-  const networkReadX: ProcessedStats[] = []
-  const networkWriteX: ProcessedStats[] = []
+  const networkReadX: ProcessedStats[] = [];
+  const networkWriteX: ProcessedStats[] = [];
 
-  logger.debug('Getting network stats ...')
+  logger.debug("Getting network stats ...");
   const response = await axios.get(
     `http://localhost:${STAT_SERVER_PORT}/network`
-  )
+  );
   if (logger.isDebugEnabled()) {
-    logger.debug(`Got network stats: ${JSON.stringify(response.data)}`)
+    logger.debug(`Got network stats: ${JSON.stringify(response.data)}`);
   }
 
   response.data.forEach((element: NetworkStats) => {
     networkReadX.push({
       x: element.time,
-      y: element.rxMb && element.rxMb > 0 ? element.rxMb : 0
-    })
+      y: element.rxMb && element.rxMb > 0 ? element.rxMb : 0,
+    });
 
     networkWriteX.push({
       x: element.time,
-      y: element.txMb && element.txMb > 0 ? element.txMb : 0
-    })
-  })
+      y: element.txMb && element.txMb > 0 ? element.txMb : 0,
+    });
+  });
 
-  return { networkReadX, networkWriteX }
+  return { networkReadX, networkWriteX };
 }
 
 async function getDiskStats(): Promise<ProcessedDiskStats> {
-  const diskReadX: ProcessedStats[] = []
-  const diskWriteX: ProcessedStats[] = []
+  const diskReadX: ProcessedStats[] = [];
+  const diskWriteX: ProcessedStats[] = [];
 
-  logger.debug('Getting disk stats ...')
-  const response = await axios.get(`http://localhost:${STAT_SERVER_PORT}/disk`)
+  logger.debug("Getting disk stats ...");
+  const response = await axios.get(`http://localhost:${STAT_SERVER_PORT}/disk`);
   if (logger.isDebugEnabled()) {
-    logger.debug(`Got disk stats: ${JSON.stringify(response.data)}`)
+    logger.debug(`Got disk stats: ${JSON.stringify(response.data)}`);
   }
 
   response.data.forEach((element: DiskStats) => {
     diskReadX.push({
       x: element.time,
-      y: element.rxMb && element.rxMb > 0 ? element.rxMb : 0
-    })
+      y: element.rxMb && element.rxMb > 0 ? element.rxMb : 0,
+    });
 
     diskWriteX.push({
       x: element.time,
-      y: element.wxMb && element.wxMb > 0 ? element.wxMb : 0
-    })
-  })
+      y: element.wxMb && element.wxMb > 0 ? element.wxMb : 0,
+    });
+  });
 
-  return { diskReadX, diskWriteX }
+  return { diskReadX, diskWriteX };
 }
 
 async function getDiskSizeStats(): Promise<ProcessedDiskSizeStats> {
-  const diskAvailableX: ProcessedStats[] = []
-  const diskUsedX: ProcessedStats[] = []
+  const diskAvailableX: ProcessedStats[] = [];
+  const diskUsedX: ProcessedStats[] = [];
 
-  logger.debug('Getting disk size stats ...')
+  logger.debug("Getting disk size stats ...");
   const response = await axios.get(
     `http://localhost:${STAT_SERVER_PORT}/disk_size`
-  )
+  );
   if (logger.isDebugEnabled()) {
-    logger.debug(`Got disk size stats: ${JSON.stringify(response.data)}`)
+    logger.debug(`Got disk size stats: ${JSON.stringify(response.data)}`);
   }
 
   response.data.forEach((element: DiskSizeStats) => {
@@ -343,48 +344,42 @@ async function getDiskSizeStats(): Promise<ProcessedDiskSizeStats> {
       y:
         element.availableSizeMb && element.availableSizeMb > 0
           ? element.availableSizeMb
-          : 0
-    })
+          : 0,
+    });
 
     diskUsedX.push({
       x: element.time,
-      y: element.usedSizeMb && element.usedSizeMb > 0 ? element.usedSizeMb : 0
-    })
-  })
+      y: element.usedSizeMb && element.usedSizeMb > 0 ? element.usedSizeMb : 0,
+    });
+  });
 
-  return { diskAvailableX, diskUsedX }
+  return { diskAvailableX, diskUsedX };
 }
 
 async function getLineGraph(options: LineGraphOptions): Promise<GraphResponse> {
   const payload = {
     options: {
-      width: 1000,
-      height: 500,
-      xAxis: {
-        label: 'Time'
-      },
+      ...CHART_DEFAULTS.options,
       yAxis: {
-        label: options.label
+        ...CHART_DEFAULTS.options.yAxis,
+        label: options.label,
       },
-      timeTicks: {
-        unit: 'auto'
-      }
     },
-    lines: [options.line]
-  }
+    lines: [options.line],
+  };
 
-  let response = null
+  let response = null;
   try {
     response = await axios.put(
-      'https://api.globadge.com/v1/chartgen/line/time',
+      "https://api.globadge.com/v1/chartgen/line/time",
       payload
-    )
+    );
   } catch (error: any) {
-    logger.error(error)
-    logger.error(`getLineGraph ${JSON.stringify(payload)}`)
+    logger.error(error);
+    logger.error(`getLineGraph ${JSON.stringify(payload)}`);
   }
 
-  return response?.data
+  return response?.data;
 }
 
 async function getStackedAreaGraph(
@@ -392,109 +387,103 @@ async function getStackedAreaGraph(
 ): Promise<GraphResponse> {
   const payload = {
     options: {
-      width: 1000,
-      height: 500,
-      xAxis: {
-        label: 'Time'
-      },
+      ...CHART_DEFAULTS.options,
       yAxis: {
-        label: options.label
+        ...CHART_DEFAULTS.options.yAxis,
+        label: options.label,
       },
-      timeTicks: {
-        unit: 'auto'
-      }
     },
-    areas: options.areas
-  }
+    areas: options.areas,
+  };
 
-  let response = null
+  let response = null;
   try {
     response = await axios.put(
-      'https://api.globadge.com/v1/chartgen/stacked-area/time',
+      "https://api.globadge.com/v1/chartgen/stacked-area/time",
       payload
-    )
+    );
   } catch (error: any) {
-    logger.error(error)
-    logger.error(`getStackedAreaGraph ${JSON.stringify(payload)}`)
+    logger.error(error);
+    logger.error(`getStackedAreaGraph ${JSON.stringify(payload)}`);
   }
-  return response?.data
+  return response?.data;
 }
 
 ///////////////////////////
 
 export async function start(): Promise<boolean> {
-  logger.info(`Starting stat collector ...`)
+  logger.info(`Starting stat collector ...`);
 
   try {
-    let metricFrequency = 0
-    const metricFrequencyInput: string = core.getInput('metric_frequency')
+    let metricFrequency = 0;
+    const metricFrequencyInput: string = core.getInput("metric_frequency");
     if (metricFrequencyInput) {
-      const metricFrequencyVal: number = parseInt(metricFrequencyInput)
+      const metricFrequencyVal: number = parseInt(metricFrequencyInput);
       if (Number.isInteger(metricFrequencyVal)) {
-        metricFrequency = metricFrequencyVal * 1000
+        metricFrequency = metricFrequencyVal * 1000;
       }
     }
 
     const child: ChildProcess = spawn(
       process.argv[0],
-      [path.join(__dirname, '../scw/index.js')],
+      [path.join(__dirname, "../scw/index.js")],
       {
         detached: true,
-        stdio: 'ignore',
+        stdio: "ignore",
         env: {
           ...process.env,
           WORKFLOW_TELEMETRY_STAT_FREQ: metricFrequency
             ? `${metricFrequency}`
-            : undefined
-        }
+            : undefined,
+        },
       }
-    )
-    child.unref()
+    );
+    child.unref();
 
-    logger.info(`Started stat collector`)
+    logger.info(`Started stat collector`);
 
-    return true
+    return true;
   } catch (error: any) {
-    logger.error('Unable to start stat collector')
-    logger.error(error)
+    logger.error("Unable to start stat collector");
+    logger.error(error);
 
-    return false
+    return false;
   }
 }
 
 export async function finish(currentJob: WorkflowJobType): Promise<boolean> {
-  logger.info(`Finishing stat collector ...`)
+  logger.info(`Finishing stat collector ...`);
 
   try {
     // Trigger stat collect, so we will have remaining stats since the latest schedule
-    await triggerStatCollect()
+    await triggerStatCollect();
 
-    logger.info(`Finished stat collector`)
+    logger.info(`Finished stat collector`);
 
-    return true
+    return true;
   } catch (error: any) {
-    logger.error('Unable to finish stat collector')
-    logger.error(error)
+    logger.error("Unable to finish stat collector");
+    logger.error(error);
 
-    return false
+    return false;
   }
 }
 
 export async function report(
   currentJob: WorkflowJobType
 ): Promise<string | null> {
-  logger.info(`Reporting stat collector result ...`)
+  logger.info(`Reporting stat collector result ...`);
 
   try {
-    const postContent: string = await reportWorkflowMetrics()
+    const postContent: string = await reportWorkflowMetrics();
 
-    logger.info(`Reported stat collector result`)
+    logger.info(`Reported stat collector result`);
 
-    return postContent
+    return postContent;
   } catch (error: any) {
-    logger.error('Unable to report stat collector result')
-    logger.error(error)
+    logger.error("Unable to report stat collector result");
+    logger.error(error);
 
-    return null
+    return null;
   }
 }

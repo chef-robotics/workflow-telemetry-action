@@ -1,8 +1,9 @@
-import { WorkflowJobType } from './interfaces'
-import * as logger from './logger'
+import { WorkflowJobType } from "./interfaces";
+import { MERMAID_DEFAULTS } from "./config";
+import * as logger from "./logger";
 
 function generateTraceChartForSteps(job: WorkflowJobType): string {
-  let chartContent = ''
+  let chartContent = "";
 
   /**
      gantt
@@ -20,100 +21,108 @@ function generateTraceChartForSteps(job: WorkflowJobType): string {
        Post Run actions/checkout@v2 : 1658073655000, 1658073655000
   */
 
-  chartContent = chartContent.concat('gantt', '\n')
-  chartContent = chartContent.concat('\t', `title ${job.name}`, '\n')
-  chartContent = chartContent.concat('\t', `dateFormat x`, '\n')
-  chartContent = chartContent.concat('\t', `axisFormat %H:%M:%S`, '\n')
+  chartContent = chartContent.concat("gantt", "\n");
+  chartContent = chartContent.concat("\t", `title ${job.name}`, "\n");
+  chartContent = chartContent.concat(
+    "\t",
+    `dateFormat ${MERMAID_DEFAULTS.gantt.dateFormat}`,
+    "\n"
+  );
+  chartContent = chartContent.concat(
+    "\t",
+    `axisFormat ${MERMAID_DEFAULTS.gantt.axisFormat}`,
+    "\n"
+  );
 
   for (const step of job.steps || []) {
     if (!step.started_at || !step.completed_at) {
-      continue
+      continue;
     }
     chartContent = chartContent.concat(
-      '\t',
-      `${step.name.replace(/:/g, '-')} : `
-    )
+      "\t",
+      `${step.name.replace(/:/g, "-")} : `
+    );
 
-    if (step.name === 'Set up job' && step.number === 1) {
-      chartContent = chartContent.concat('milestone, ')
+    if (step.name === "Set up job" && step.number === 1) {
+      chartContent = chartContent.concat("milestone, ");
     }
 
-    if (step.conclusion === 'failure') {
+    if (step.conclusion === "failure") {
       // to show red
-      chartContent = chartContent.concat('crit, ')
-    } else if (step.conclusion === 'skipped') {
+      chartContent = chartContent.concat("crit, ");
+    } else if (step.conclusion === "skipped") {
       // to show grey
-      chartContent = chartContent.concat('done, ')
+      chartContent = chartContent.concat("done, ");
     }
 
-    const startTime: number = new Date(step.started_at).getTime()
-    const finishTime: number = new Date(step.completed_at).getTime()
+    const startTime: number = new Date(step.started_at).getTime();
+    const finishTime: number = new Date(step.completed_at).getTime();
     chartContent = chartContent.concat(
       `${Math.min(startTime, finishTime)}, ${finishTime}`,
-      '\n'
-    )
+      "\n"
+    );
   }
 
   const postContentItems: string[] = [
-    '',
-    '### Step Trace',
-    '',
-    '```mermaid' + '\n' + chartContent + '\n' + '```'
-  ]
-  return postContentItems.join('\n')
+    "",
+    "### Step trace",
+    "",
+    "```mermaid" + "\n" + chartContent + "\n" + "```",
+  ];
+  return postContentItems.join("\n");
 }
 
 ///////////////////////////
 
 export async function start(): Promise<boolean> {
-  logger.info(`Starting step tracer ...`)
+  logger.info(`Starting step tracer ...`);
 
   try {
-    logger.info(`Started step tracer`)
+    logger.info(`Started step tracer`);
 
-    return true
+    return true;
   } catch (error: any) {
-    logger.error('Unable to start step tracer')
-    logger.error(error)
+    logger.error("Unable to start step tracer");
+    logger.error(error);
 
-    return false
+    return false;
   }
 }
 
 export async function finish(currentJob: WorkflowJobType): Promise<boolean> {
-  logger.info(`Finishing step tracer ...`)
+  logger.info(`Finishing step tracer ...`);
 
   try {
-    logger.info(`Finished step tracer`)
+    logger.info(`Finished step tracer`);
 
-    return true
+    return true;
   } catch (error: any) {
-    logger.error('Unable to finish step tracer')
-    logger.error(error)
+    logger.error("Unable to finish step tracer");
+    logger.error(error);
 
-    return false
+    return false;
   }
 }
 
 export async function report(
   currentJob: WorkflowJobType
 ): Promise<string | null> {
-  logger.info(`Reporting step tracer result ...`)
+  logger.info(`Reporting step tracer result ...`);
 
   if (!currentJob) {
-    return null
+    return null;
   }
 
   try {
-    const postContent: string = generateTraceChartForSteps(currentJob)
+    const postContent: string = generateTraceChartForSteps(currentJob);
 
-    logger.info(`Reported step tracer result`)
+    logger.info(`Reported step tracer result`);
 
-    return postContent
+    return postContent;
   } catch (error: any) {
-    logger.error('Unable to report step tracer result')
-    logger.error(error)
+    logger.error("Unable to report step tracer result");
+    logger.error(error);
 
-    return null
+    return null;
   }
 }
